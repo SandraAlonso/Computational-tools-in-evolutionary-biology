@@ -1,0 +1,61 @@
+---
+title: "Leson 2"
+output: html_notebook
+---
+
+```{r}
+#columnas = individuals
+#filas = genes
+#Parametres
+#los numero de la matriz son los cambios que se han producido en ese gen
+#N=100
+N=10000            #number of individuals
+n_loc = 10        #number of genes
+u=0.0001          #mutation rate per genome
+days = 50000      #lenght of the experiment
+
+#Variables
+pop <-matrix(0,n_loc,N)        #population matrix
+s1<-matrix(0, n_loc, days/200) #container to record single substitutions
+s2<-matrix(0, n_loc, days/200) #container to record double substitutions
+s3<-matrix(0, n_loc, days/200) #container to record triple substitutions
+s4<-matrix(0, n_loc, days/200) #container to record quadruple substitutions
+
+obs<-0
+
+#Algorithm (growth and mutation)
+for(days in 1:days){
+  offspring<-sample(1:N, N/2, replace = TRUE)                   #choose half of the population
+  pop<-cbind(pop[,offspring],pop[,offspring], deparse.level =0) #update the matrix
+  
+  #Mutations
+  mutations<-rpois(1,N*u)
+  ind<-round(runif(mutations,1,N))
+  gen<-round(runif(mutations,1,n_loc))
+  coords<-rbind(cbind(c(gen), c(ind)))
+  pop[coords]<-pop[coords]+1
+  
+  if(days%in% seq(1,50000,by=200)){    # From 1 to 50000 by 200 days (1,200,400,etc)
+    obs<-obs+1
+    for(i in (1:n_loc)){               #recorre todos los genes (gen 1 tiene x mutaciones individuales, dobles, triples y cuadruples)
+      s1[i,obs]<-sum(pop[i,]==1)          #how many individuals have 1 mutations
+      s2[i,obs]<-sum(pop[i,]==2)          #how many individuals have 2 mutations
+      s3[i,obs]<-sum(pop[i,]==3)          #how many individuals have 3 mutations
+      s4[i,obs]<-sum(pop[i,]==4)          #how many individuals have 4 mutations
+    }
+    #print(days)
+  }
+}
+
+print(rbind(s1[,obs], s2[,obs], s3[,obs], s4[,obs]))
+plot(1:obs, s1[1,1:obs], type='l', ylim=c(1,N))
+for(i in 1:n_loc){
+  lines(1:obs, s1[i,1:obs], col=i, lwd=1.5)
+  lines(1:obs, s2[i,1:obs], col=i, lwd=1.5)
+  lines(1:obs, s3[i,1:obs], col=i, lwd=1.5)
+  lines(1:obs, s4[i,1:obs], col=i, lwd=1.5)
+
+}
+
+```
+
