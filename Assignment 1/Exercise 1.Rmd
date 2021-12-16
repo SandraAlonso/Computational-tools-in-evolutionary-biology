@@ -1,0 +1,123 @@
+---
+title: "Exercise #|"
+output: html_notebook
+---
+
+```{r}
+# Import necessary libraries
+library(dbplyr)
+library(ggpubr)
+library(ggplot2)
+
+################ DECLARATION OF PARAMETRES AND VARIABLES #######################
+
+u = 0.00                      #Mutation rate per genome
+n_loc = 10                    #Number of genes
+days = 10000                  #Length of the experiment
+replicates = 100000           #Number of iterations
+N = c(100, 300, 1000, 3000)   #Number of individuals (population)
+B_neck = c(0.25,0.5,1)        #Bottle neck percentage
+time                          #Container to store replicate data
+final_fix = c()               #Here we will store the final information of fixations
+```
+
+
+```{r}
+
+############################# PROGRAMM EXECUTING ###############################
+
+# I have developed just one function which iterates all the possible parameters
+for (n in N){
+  for (b in B_neck){
+    times = c()
+    print(n)
+    print(b)
+    Pfix=0  
+        #Replication loop
+        for (r in 1:replicates ){
+          if(n==3000 && b==1){ # This is only to follow the last iteration because its too slow
+            print(r)
+          }
+          
+          pop <-matrix(0,n_loc,n)        # initialization of the population matrix
+          S1<-matrix(0, 1, days)         # container to record single substitutions
+          times = c(times,c(0))          # container to save fixations days
+    
+          # As we only want one mutation in one individual, I have move it out of the loop (in comparation to class code)
+          ind<-round(runif(1,1,n))
+          gen<-round(runif(1,1,n_loc))
+          coords<-rbind(cbind(c(gen), c(ind)))
+          pop[coords]<-pop[coords]+1
+
+          
+          #Days iteration (duration if the experiment)
+          for(d in 1:days) {
+            offspring<-sample(1:n, n*b, replace = TRUE) # Here we multiply population by bottleneck to know how many individuals will be able to reproduce
+            
+            # We must add 1/b number of offspring
+            if (b == 0.25){ # 1/0.25 = 4
+              pop[] = rbind(pop[,offspring], pop[,offspring], pop[,offspring], pop[,offspring], deparse.level = 0)
+            }
+            else if ( b == 0.5){ # 1/0.5 = 2
+              pop[] = rbind(pop[,offspring], pop[,offspring], deparse.level = 0)
+            }
+            else if ( b==1.0){ # 1/1 = 1
+              pop[] = rbind(pop[,offspring], deparse.level = 0) 
+            }
+       
+        
+           S1[1,d] = sum(pop[gen,] == 1)
+           
+            if (S1[1,d] == 0){      # The individual has been extinct so we stop
+              break
+            } 
+            else if (S1[1,d]==n){  # The individual has been fixed so we stop
+              times[r] = d         #We store the day to calculate the mean
+              break
+            }
+          # end of days loop   
+          }
+        # end of replications loop
+        }
+    
+    
+    Pfix = sum(times != 0) / replicates  # Number of fix over the total of iterations == probability to get fix
+    Tfix = mean(times[times != 0])       # Mean of time taken to fix (days) 
+    result = c(n, b, Tfix, Pfix)         #Create a vector of vectors which all the results
+    final_fix = rbind(final_fix, result) #Create a matrix with the results
+  }
+}
+```
+
+
+```{r}
+colnames(final_fix) =c("N", "Bottle_neck", "Tfix", "Pfix") 
+print(final_fix)
+final_fix <- as.data.frame(final_fix) 
+
+############################LINEAR MODEL PLOTS ################################
+
+PfixAndN = ggplot(final_fix, aes(x=N, y=Pfix)) +
+  geom_point(size = 4, color ="green",aes(x=N, y=Pfix)) +
+  geom_smooth(color = "red", se = FALSE, method = "lm") 
+
+PfixAndB = ggplot(final_fix, aes(x = Bottle_neck, y = Pfix)) +
+  geom_point(size =4, color ="green", aes(x = Bottle_neck, y = Pfix)) +
+  geom_smooth(color="red", se = FALSE, method = "lm") 
+
+PfixAndN
+PfixAndB
+
+TfixAndN = ggplot(final_fix, aes(x=N, y=Tfix)) +
+  geom_point(size =4, color ="green" ,aes(x=N, y=Tfix)) +
+  geom_smooth(color = "red",se = FALSE, method = "lm") 
+
+TfixAndB = ggplot(final_fix, aes(x = Bottle_neck, y = Tfix)) +
+  geom_point(size = 4, color ="green", aes(x = Bottle_neck, y = Tfix)) +
+  geom_smooth(color="red", se = FALSE, method = "lm") 
+
+print(TfixAndN)
+print(TfixAndB)
+
+```
+
